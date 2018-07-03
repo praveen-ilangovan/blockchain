@@ -2,6 +2,9 @@
 
 # Byte-compiled / optimized / DLL files
 
-__pycache__/
 *.py[cod]
 *$py.class
+
+# tests
+__pycache__/
+resources/test_*
