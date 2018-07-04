@@ -91,7 +91,20 @@ class Wallet(object):
 
 	@property
 	def public_key(self):
-		return self.__public_key	
+		return self.__public_key
+
+	def get_serialized_public_key(self):
+		""" Serialize public key
+		"""
+		return self.__public_key.public_bytes(
+			encoding=serialization.Encoding.PEM,
+			format=serialization.PublicFormat.SubjectPublicKeyInfo
+			)
+
+	def get_serialized_private_key(self):
+		""" serialize encrypted private key
+		"""
+		return self.__encrypted_private_key
 
 	def _decrypt_private_key(self, password, backend=None):
 		if backend == None:
