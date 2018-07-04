@@ -185,3 +185,19 @@ def open_database(dbpath=DB_PATH):
     # __exit__ (Commit and close the connection)
     db.commit()
     db.close()
+
+def is_unique_name(name):
+    users = []
+    with open_database() as db:
+        users = db.get_users()
+    return name not in users
+
+def add_wallet(owner, public_key, private_key):
+    with open_database() as db:
+        db.add_wallet(owner, public_key, private_key)
+
+def get_wallet(owner):
+    result = []
+    with open_database() as db:
+        result = db.get_wallet(owner)
+    return result
