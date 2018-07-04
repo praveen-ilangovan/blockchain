@@ -1,7 +1,9 @@
 import sys
 
 from PySide import QtGui
-from PySide import QtCore
+
+# Local imports
+from . import widgets
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
@@ -9,7 +11,18 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle("Blockchain")
         self.resize(700, 400)
 
-def main():
+        # Tabs
+        self.__tabWidget = QtGui.QTabWidget()
+        self.__tabWidget.setTabShape(QtGui.QTabWidget.Rounded)
+
+        # Add widgets to the tab
+        self.__generateWalletWidget = widgets.GenerateWalletWidget()
+
+        self.__tabWidget.addTab(self.__generateWalletWidget, "Generate")
+
+        self.setCentralWidget(self.__tabWidget)
+
+def launch_ui():
     app = QtGui.QApplication(sys.argv)
     widget = MainWindow()
     widget.show()
