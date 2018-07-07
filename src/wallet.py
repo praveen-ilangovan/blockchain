@@ -1,8 +1,12 @@
+import base64
 
 # Cryptography
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.exceptions import InvalidSignature
 
 # Local imports
 from . import database
@@ -77,6 +81,7 @@ class Wallet(object):
 		"""
 		db_entry = database.get_wallet(owner)
 		if not db_entry:
+			print "Not found"
 			return None
 		return cls(db_entry[0], str(db_entry[2]))
 
@@ -94,7 +99,7 @@ class Wallet(object):
 		return self.__public_key
 
 	def get_serialized_public_key(self):
-		""" Serialize public key
+		""" Returns serialized public key
 		"""
 		return self.__public_key.public_bytes(
 			encoding=serialization.Encoding.PEM,
@@ -102,10 +107,63 @@ class Wallet(object):
 			)
 
 	def get_serialized_private_key(self):
-		""" serialize encrypted private key
+		""" Returns serialized encrypted private key
 		"""
 		return self.__encrypted_private_key
 
+	def sign(self, message, password):
+		"""Private key is used to sign a message.
+		This allows anyone with the public key to verify that the
+		message was created by someone who possesses the corresponding
+		private key.
+
+		Args:
+			message str: Message to be signed
+			password str: Password to decrypt the private key
+
+		Returns:
+			str : signature
+		"""
+		pvt_key = self._decrypt_private_key(password)
+
+		signature = pvt_key.sign(message,
+			padding.PSS( mgf=padding.MGF1( hashes.SHA256() ),
+						salt_length=padding.PSS.MAX_LENGTH ),
+			hashes.SHA256()
+			)
+
+		return base64.b64encode(signature)
+
+	def verify(self, message, signature):
+		"""Public key is used to verify if the signature
+		was generated using the associated private key.
+
+		Args:
+			message str: Message to be verified.
+			signature str: Signature generated using sender's private key.
+
+		Returns:
+			bool : True if verification passed.
+		"""
+
+		try:
+			decoded_signature = base64.b64decode(signature)
+
+			self.public_key.verify(decoded_signature, message,
+				padding.PSS( mgf=padding.MGF1( hashes.SHA256() ),
+							 salt_length=padding.PSS.MAX_LENGTH ),
+				hashes.SHA256()
+				)
+		except InvalidSignature:
+			return False
+
+		return True
+
+	##########################################################################
+	#
+	# Internal helper methods
+	#
+	##########################################################################
 	def _decrypt_private_key(self, password, backend=None):
 		if backend == None:
 			backend = default_backend()
