@@ -17,8 +17,10 @@ class MainWindow(QtGui.QMainWindow):
 
         # Add widgets to the tab
         self.__generateWalletWidget = widgets.GenerateWalletWidget()
+        self.__makeTransactionWidget = widgets.MakeTransactionWidget()
 
-        self.__tabWidget.addTab(self.__generateWalletWidget, "Generate")
+        self.__tabWidget.addTab(self.__generateWalletWidget, "Generate Wallet")
+        self.__tabWidget.addTab(self.__makeTransactionWidget, "Make Transaction")
 
         self.setCentralWidget(self.__tabWidget)
 

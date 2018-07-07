@@ -186,12 +186,6 @@ def open_database(dbpath=DB_PATH):
     db.commit()
     db.close()
 
-def is_unique_name(name):
-    users = []
-    with open_database() as db:
-        users = db.get_users()
-    return name not in users
-
 def add_wallet(owner, public_key, private_key):
     with open_database() as db:
         db.add_wallet(owner, public_key, private_key)
@@ -201,3 +195,12 @@ def get_wallet(owner):
     with open_database() as db:
         result = db.get_wallet(owner)
     return result
+
+def get_wallet_holders():
+    users = []
+    with open_database() as db:
+        users = db.get_users()
+    return users
+
+def is_unique_name(name):
+    return name not in get_wallet_holders()

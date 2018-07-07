@@ -140,6 +140,8 @@ def submit_transaction(sender, receiver, amount, password):
 	with open(PENDING_TRANSACTIONS_FILE, "w+") as f:
 		json.dump(transactions, f, ensure_ascii=False, indent=4)
 
+	return True
+
 def verify_transaction(sender, receiver, amount, signature):
 	""" The transaction is verified using sender's public key to make sure
 	that it was the sender who submitted this transaction.

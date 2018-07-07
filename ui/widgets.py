@@ -5,6 +5,7 @@ from PySide import QtCore
 # Local imports
 from ..src import database
 from ..src.wallet import Wallet
+from ..src import transaction
 
 MIN_WIDTH = 150
 MIN_HEIGHT = 50
@@ -71,6 +72,41 @@ class SetPasswordDialog(QtGui.QDialog):
     def getPassword(self):
         return str(self.__enterEdit.text())
 
+class GetPasswordDialog(QtGui.QDialog):
+    def __init__(self, parent=None):
+        super(GetPasswordDialog, self).__init__(parent)
+        self.setModal(True)
+        self.setWindowTitle("Password")
+        self.resize(500, 70)
+
+        self.__enterLabel = QtGui.QLabel('Enter your password : ')
+        self.__enterEdit = self.__create_password_edit()
+
+        buttonBox = QtGui.QDialogButtonBox()
+        buttonBox.addButton("OK", QtGui.QDialogButtonBox.AcceptRole)
+        buttonBox.addButton("Cancel", QtGui.QDialogButtonBox.RejectRole)
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+        gridLayout = QtGui.QGridLayout()
+        gridLayout.addWidget(self.__enterLabel, 0,0,1,1)
+        gridLayout.addWidget(self.__enterEdit, 0,1,1,1)
+
+        mainLayout = QtGui.QVBoxLayout()
+        mainLayout.addLayout(gridLayout)
+        mainLayout.addWidget(buttonBox)
+
+        self.setLayout(mainLayout)
+
+    def __create_password_edit(self):
+        echoMode = QtGui.QLineEdit.Password
+        ledit = QtGui.QLineEdit()
+        ledit.setEchoMode(echoMode)
+        return ledit
+
+    def get_password(self):
+        return str(self.__enterEdit.text())
+
 class KeyDisplayWidget(QtGui.QWidget):
     """ A simple widget to display the RSA key.
         
@@ -94,6 +130,32 @@ class KeyDisplayWidget(QtGui.QWidget):
 
     def clearText(self):
         self.__textBox.clear()
+
+class UserComboBox(QtGui.QWidget):
+    """ A drop down box to list all the available users
+    in the database.        
+    """
+    def __init__(self, label, parent=None):
+        super(UserComboBox, self).__init__(parent)
+
+        self.__label = QtGui.QLabel("%s :" %(label))
+        self.__cbox = QtGui.QComboBox()
+        self.__cbox.setMinimumWidth(MIN_WIDTH)
+        self.__cbox.setMinimumHeight(MIN_HEIGHT)
+        
+        mainLayout = QtGui.QHBoxLayout()
+        mainLayout.addWidget(self.__label)
+        mainLayout.addWidget(self.__cbox)
+
+        self.setLayout(mainLayout)
+
+    def populate(self, users):
+        self.__cbox.clear()
+        for user in users:
+            self.__cbox.addItem(user)
+
+    def get_user(self):
+        return str(self.__cbox.currentText())
 
 ##############################################################################
 #
@@ -186,3 +248,100 @@ class GenerateWalletWidget(QtGui.QWidget):
         self.__nameEdit.clear()
         self.__pubKeyBox.clearText()
         self.__pvtKeyBox.clearText()
+
+class MakeTransactionWidget(QtGui.QWidget):
+    """ Widget to make a transaction
+
+    Choose the sender, receiver and enter the amount to
+    be transfered. Then click 'Make transaction' button
+    to initiate a transaction. You will be prompted to
+    enter the password. This password is used to decrypt
+    the RSA private key of the sender which is then used to
+    sign the transaction. 
+
+    The signed transaction is then verified by the block module
+    to validate the transaction. If it is verified then the 
+    transaction is added to the pending queue.
+    """
+    def __init__(self, parent=None):
+        super(MakeTransactionWidget, self).__init__(parent)
+
+        self.__senderBox   = UserComboBox("Sender   ")
+        self.__receiverBox = UserComboBox("Receiver ")
+        self.__amountLabel = QtGui.QLabel(" Amount   :")
+        self.__amountEdit  = QtGui.QDoubleSpinBox()
+        self.__amountEdit.setMinimum(0.01)
+        self.__amountEdit.setSingleStep(1.0)
+        self.__amountEdit.setMinimumWidth(MIN_WIDTH)
+        self.__amountEdit.setMinimumHeight(MIN_HEIGHT)
+        self.__makeTransactionButton = QtGui.QPushButton("Make Transaction")
+        self.__makeTransactionButton.setMinimumHeight(80)
+
+        amountLayout = QtGui.QHBoxLayout()
+        amountLayout.addWidget(self.__amountLabel)
+        amountLayout.addWidget(self.__amountEdit)
+        amountLayout.addStretch(0)
+
+        mainLayout = QtGui.QVBoxLayout()
+        mainLayout.addWidget(self.__senderBox,
+                                alignment = QtCore.Qt.AlignLeft)
+        mainLayout.addStretch(0)
+        mainLayout.addWidget(self.__receiverBox,
+                                alignment = QtCore.Qt.AlignLeft)
+        mainLayout.addStretch(0)
+        mainLayout.addLayout(amountLayout)
+        mainLayout.addStretch(0)
+        mainLayout.addWidget(self.__makeTransactionButton)
+        mainLayout.addStretch(1)
+
+        self.setLayout(mainLayout)
+
+        self.populateUsers()
+
+        self.__makeTransactionButton.clicked.connect(self.makeTransaction)
+
+    def populateUsers(self):
+        users = [""]
+        users.extend(database.get_wallet_holders())
+
+        self.__senderBox.populate(users)
+        self.__receiverBox.populate(users)
+
+    def makeTransaction(self):
+        sender = str(self.__senderBox.get_user())
+        if not sender:
+            QtGui.QMessageBox.critical(self, "Invalid input", 
+                                       "Please choose the sender")
+            return
+
+        receiver = str(self.__receiverBox.get_user())
+        if not receiver:
+            QtGui.QMessageBox.critical(self, "Invalid input", 
+                                       "Please choose the receiver")
+            return
+
+        if sender == receiver:
+            QtGui.QMessageBox.critical(self, "Invalid input", 
+                        "Sender and receiver cannot be the same.")
+            return 
+
+        amount = self.__amountEdit.value()
+        if amount < 0.01:
+            QtGui.QMessageBox.critical(self, "Invalid input", 
+                            "Please specify an amount more than 0.01")
+            return
+
+        dialog = GetPasswordDialog()
+        if dialog.exec_():
+            password = dialog.get_password()
+            submitted = transaction.submit_transaction(sender, receiver,
+                amount, password)
+            if submitted:
+                QtGui.QMessageBox.information(self, "Success",
+                    " Transaction has been successfully submitted \
+                    to a queue. Soon this will be verified by a miner \
+                    and added to a block.")
+            else:
+                QtGui.QMessageBox.critical(self, "Failed",
+                    " Transaction failed. Please check the password. \
+                    For more details refer to the log. ")

@@ -125,6 +125,8 @@ class Wallet(object):
 			str : signature
 		"""
 		pvt_key = self._decrypt_private_key(password)
+		if pvt_key == None:
+			return None
 
 		signature = pvt_key.sign(message,
 			padding.PSS( mgf=padding.MGF1( hashes.SHA256() ),
@@ -168,10 +170,18 @@ class Wallet(object):
 		if backend == None:
 			backend = default_backend()
 
-		return serialization.load_pem_private_key(
-			self.__encrypted_private_key,
-			password=bytes(password),
-			backend=default_backend())
+		private_key = None
+
+		try:
+			private_key = serialization.load_pem_private_key(
+				self.__encrypted_private_key,
+				password=bytes(password),
+				backend=default_backend())
+		except ValueError:
+			# Log a message
+			pass
+
+		return private_key
 
 	def _load_pem_public_key(self):
 		db_entry = database.get_wallet(self.__owner)
