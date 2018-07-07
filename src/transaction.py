@@ -8,6 +8,7 @@ except ImportError:
 # Local imports
 from .wallet import Wallet
 from . import utils
+from ..logger import LOG
 
 """
 Wallet holder sends dummycoins to another wallet holder
@@ -92,23 +93,6 @@ class Transaction(object):
 
 		return sender_wallet.verify(self.message, signature)
 
-	def submit(self, password):
-		""" Transaction is signed and added to the pending
-		transactions file.
-
-		Args:
-			password str: Password of the sender's wallet.
-		"""
-		signature = self.sign_transaction(password)
-
-		data = {'sender' : self.__sender,
-				'receiver' : self.__receiver,
-				'amount' : self.__amount,
-				'signature' : signature,
-				'submitted_time' : utils.get_timestamp()}
-
-		add_to_pending_transactions([data])
-
 ##############################################################################
 #
 # Functions to submit and verify transactions
@@ -140,6 +124,8 @@ def submit_transaction(sender, receiver, amount, password):
 	with open(PENDING_TRANSACTIONS_FILE, "w+") as f:
 		json.dump(transactions, f, ensure_ascii=False, indent=4)
 
+	LOG.info("Transaction is successful. Soon this will be verified and \
+		added to a block.")
 	return True
 
 def verify_transaction(sender, receiver, amount, signature):
@@ -184,5 +170,6 @@ def clear_transactions():
 	"""
 	with open(PENDING_TRANSACTIONS_FILE, "w+") as f:
 		json.dump([], f, ensure_ascii=False, indent=4)
+	LOG.debug("All transactions have been cleared.")
 
 

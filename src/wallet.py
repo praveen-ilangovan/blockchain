@@ -10,6 +10,7 @@ from cryptography.exceptions import InvalidSignature
 
 # Local imports
 from . import database
+from ..logger import LOG
 
 class Wallet(object):
 	""" Wallet holds the private and public keys of an owner.
@@ -37,6 +38,7 @@ class Wallet(object):
 		"""
 		# check if the owner is unique
 		if not database.is_unique_name(owner):
+			LOG.info("Found an existing wallet with this name. So returning it.")
 			return Wallet.load_from_database(owner)
 
 		if backend == None:
@@ -65,6 +67,7 @@ class Wallet(object):
 
 		# add it to the database
 		database.add_wallet(owner, public_bytes, encrypted_private_key)
+		LOG.debug("A new wallet is generated and added to the database.")
 
 		return cls(owner, encrypted_private_key)
 
@@ -81,7 +84,7 @@ class Wallet(object):
 		"""
 		db_entry = database.get_wallet(owner)
 		if not db_entry:
-			print "Not found"
+			LOG.error("Wallet not found. Please generate one.")
 			return None
 		return cls(db_entry[0], str(db_entry[2]))
 
@@ -157,8 +160,10 @@ class Wallet(object):
 				hashes.SHA256()
 				)
 		except InvalidSignature:
+			LOG.error("Verification failed. Invalid Signature.")
 			return False
 
+		LOG.info("Verification successful!")
 		return True
 
 	##########################################################################
@@ -178,7 +183,7 @@ class Wallet(object):
 				password=bytes(password),
 				backend=default_backend())
 		except ValueError:
-			# Log a message
+			LOG.error("Failed to decrypt the private key. Please check the password.")
 			pass
 
 		return private_key
@@ -186,6 +191,7 @@ class Wallet(object):
 	def _load_pem_public_key(self):
 		db_entry = database.get_wallet(self.__owner)
 		if not db_entry:
+			LOG.error("Wallet not found. Please generate one.")
 			return None
 		return serialization.load_pem_public_key(
 			str(db_entry[1]),
