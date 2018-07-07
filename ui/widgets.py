@@ -345,3 +345,86 @@ class MakeTransactionWidget(QtGui.QWidget):
                 QtGui.QMessageBox.critical(self, "Failed",
                     " Transaction failed. Please check the password. \
                     For more details refer to the log. ")
+
+class BlockViewWidget(QtGui.QWidget):
+    def __init__(self, parent=None):
+        super(BlockViewWidget, self).__init__(parent)
+
+        # A table widget to display transactions that has
+        # not been pushed to the blockchain yet
+        # Sender, Receiver, Amount, TimeStamp
+        self.__tableWidget = QtGui.QTableWidget()
+        self.__tableWidget.setColumnCount(4)
+        self.__tableWidget.horizontalHeader().setStretchLastSection(True)
+
+        mainLayout = QtGui.QVBoxLayout()
+        mainLayout.addWidget(self.__tableWidget)
+
+        self.setLayout(mainLayout)
+
+    def populate(self, data):
+        self.__tableWidget.clearContents()
+
+        self.__tableWidget.setHorizontalHeaderLabels(['Sender',
+                                                      'Receiver',
+                                                      'Amount',
+                                                      'Time'])
+
+        for index, detail in enumerate(data):
+            if index >= self.__tableWidget.rowCount():
+                self.__tableWidget.insertRow(index)
+            self.__tableWidget.setItem(index, 0, self.__getItem(detail['sender']))
+            self.__tableWidget.setItem(index, 1, self.__getItem(detail['receiver']))
+            self.__tableWidget.setItem(index, 2, self.__getItem(str(detail['amount'])))
+            self.__tableWidget.setItem(index, 3, self.__getItem(detail['submitted_time']))
+
+    def __getItem(self, text):
+        item = QtGui.QTableWidgetItem()
+        item.setText(text)
+        item.setTextAlignment(QtCore.Qt.AlignCenter)
+        return item
+
+class TransactionsToCommitWidget(QtGui.QWidget):
+    def __init__(self, parent=None):
+        super(TransactionsToCommitWidget, self).__init__(parent)
+
+        # Reads from transactions.json and passes it over to blockviewwidget to populate
+        """
+        structure = [{'sender' : name,
+                      'receiver' : name,
+                      'amount' : number,
+                      'timestamp' : datetime
+                     },
+                    ...]
+        """
+        self.__currentBlock = BlockViewWidget()
+        self.__mineButton = QtGui.QPushButton("Mine")
+        self.__mineButton.setMinimumWidth(MIN_WIDTH)
+        self.__mineButton.setMinimumHeight(MIN_HEIGHT)
+        self.__refreshButton = QtGui.QPushButton("Refresh")
+        self.__refreshButton.setMinimumWidth(MIN_WIDTH)
+        self.__refreshButton.setMinimumHeight(MIN_HEIGHT)
+
+        buttonLayout = QtGui.QHBoxLayout()
+        buttonLayout.addWidget(self.__mineButton)
+        buttonLayout.addWidget(self.__refreshButton)
+
+        mainLayout = QtGui.QVBoxLayout()
+        mainLayout.addWidget(self.__currentBlock)
+        mainLayout.addStretch(0)
+        mainLayout.addLayout(buttonLayout)
+        mainLayout.addStretch(1)
+
+        self.setLayout(mainLayout)
+
+        self.__mineButton.clicked.connect(self.mine)
+        self.__refreshButton.clicked.connect(self.populateBlock)
+
+        self.populateBlock()
+
+    def populateBlock(self):
+        transactions = transaction.get_pending_transactions()
+        self.__currentBlock.populate(transactions)
+
+    def mine(self):
+        pass
