@@ -1,6 +1,10 @@
 import os
 import sqlite3
 from contextlib import contextmanager
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
 # Local imports
 from . import utils
@@ -25,17 +29,25 @@ COL_WALLETS_NAME           	= "NAME"
 COL_WALLETS_PUB_KEY        	= "PUBLIC_KEY"
 COL_WALLETS_PVT_KEY        	= "PRIVATE_KEY"
 
-TABLE_BLOCK_PREFIX          = "BLOCK_"
-COL_BLOCK_SENDER            = "SENDER"
-COL_BLOCK_RECEIVER          = "RECEIVER"
-COL_BLOCK_AMOUNT            = "AMOUNT"
-COL_BLOCK_TIME              = "TIMESTAMP"
-
+# Blockchain
+    # block, num_of_transactions, total_amount, block_added_time, hash
 TABLE_BLOCKCHAIN            = "BLOCKCHAIN"
+COL_BLOCKCHAIN_BLOCKID      = 'BLOCK_ID'
 COL_BLOCKCHAIN_BLOCK        = "BLOCK"
 COL_BLOCKCHAIN_TRANS_COUNT  = "TRANS_COUNT"
 COL_BLOCKCHAIN_AMOUNT       = "AMOUNT"
 COL_BLOCKCHAIN_TIME         = "TIMESTAMP"
+COL_BLOCKCHAIN_BLOCK_HASH   = "BLOCK_HASH"
+
+# Transactions
+    # block, sender, receiver, amount, submitted_time, verified_time
+TABLE_TRANSACTIONS          = "TRANSACTIONS"
+COL_TRANSACTION_BLOCK       = "BLOCK"
+COL_TRANSACTION_SENDER      = "SENDER"
+COL_TRANSACTION_RECEIVER    = "RECEIVER"
+COL_TRANSACTION_AMOUNT      = "AMOUNT"
+COL_TRANSACTION_SUB_TIME    = "SUBMITTED_TIME"
+COL_TRANSACTION_VER_TIME    = "VERIFIED_TIME"
 
 class BlockChainDB(object):
     """A class to access and retrieve information from the database.
@@ -46,7 +58,11 @@ class BlockChainDB(object):
     """
     def __init__(self, dbcursor):
         self.__dbcursor = dbcursor
+
+        # Create all the tables
         self.__create_wallets_table()
+        self.__create_transactions_table()
+        self.__create_blockchain_table()
 
     @property
     def dbcursor(self):
@@ -122,6 +138,125 @@ class BlockChainDB(object):
 
     ##########################################################################
     #
+    # TRANSACTIONS
+    #
+    ##########################################################################
+    def add_transaction(self, block, transaction):
+        """ Adds a new transaction to the database
+
+        Args:
+            block  (str): Name of the block the transaction is part of
+            transaction (transaction.VerifiedTransaction) : Transaction
+        """
+        cmd = """INSERT INTO %s(%s, %s, %s, %s, %s, %s)
+                    VALUES(?,?,?,?,?,?);""" %(TABLE_TRANSACTIONS,
+                                   COL_TRANSACTION_BLOCK,
+                                   COL_TRANSACTION_SENDER,
+                                   COL_TRANSACTION_RECEIVER,
+                                   COL_TRANSACTION_AMOUNT,
+                                   COL_TRANSACTION_SUB_TIME,
+                                   COL_TRANSACTION_VER_TIME)
+        self.__dbcursor.execute(cmd, (block, transaction.sender,
+                                      transaction.receiver,
+                                      transaction.amount,
+                                      transaction.submitted_time,
+                                      transaction.verified_time))
+
+    ##########################################################################
+    #
+    # BLOCKCHAIN
+    #
+    ##########################################################################
+    def add_block(self, block_name, transactions, timestamp, hash_value):
+        """ Adds a new block and its transactions to the database
+
+        Args:
+            block_name str: Name of the block
+            transactions :obj:`list` of transaction.VerifiedTransactions
+            timestamp str: Time this block will be added to the blockchain
+            hash_value str: Hash
+        """
+
+        transacted_amount = 0
+        for transaction in transactions:
+            transacted_amount += transaction.amount
+            self.add_transaction(block_name, transaction)
+
+        cmd = """INSERT INTO %s(%s, %s, %s, %s, %s)
+                    VALUES(?,?,?,?,?);""" %(TABLE_BLOCKCHAIN,
+                                   COL_BLOCKCHAIN_BLOCK,
+                                   COL_BLOCKCHAIN_TRANS_COUNT,
+                                   COL_BLOCKCHAIN_AMOUNT,
+                                   COL_BLOCKCHAIN_TIME,
+                                   COL_BLOCKCHAIN_BLOCK_HASH)
+        self.__dbcursor.execute(cmd, (block_name, len(transactions),
+                                      transacted_amount, timestamp,
+                                      hash_value))
+
+    def get_block(self, block_name):
+        """ Returns the block
+
+        Args:
+            block_name str: Name of the block
+
+        Returns:
+            tuple
+        """
+        cmd = """  SELECT * FROM %s WHERE %s = '%s'; """ %(
+                TABLE_BLOCKCHAIN, COL_BLOCKCHAIN_BLOCK, block_name)
+
+        self.__dbcursor.execute(cmd)
+        return self.__dbcursor.fetchone()
+
+    def get_transactions(self, block_name):
+        """ Returns all the transactions that are part of a block
+
+        Args:
+            block_name str: Name of the block
+
+        Returns:
+            list of tuple
+        """
+        cmd = """  SELECT * FROM %s WHERE %s = '%s'; """ %(
+                TABLE_TRANSACTIONS, COL_TRANSACTION_BLOCK, block_name)
+
+        self.__dbcursor.execute(cmd)
+        return self.__dbcursor.fetchall()
+
+    def get_last_block(self):
+        """ Returns the recently added block
+
+        Args:
+            block_name str: Name of the block
+
+        Returns:
+            tuple
+        """
+        cmd = """  SELECT * FROM %s WHERE %s = (SELECT MAX(%s) FROM %s); """ %(
+                TABLE_BLOCKCHAIN, COL_BLOCKCHAIN_BLOCKID, COL_BLOCKCHAIN_BLOCKID,
+                TABLE_BLOCKCHAIN)
+
+        self.__dbcursor.execute(cmd)
+        return self.__dbcursor.fetchone()
+
+    def get_last_block_hash(self):
+        """ Returns the hash of the recently added block
+
+        Args:
+            block_name str: Name of the block
+
+        Returns:
+            tuple
+        """
+        cmd = """  SELECT %s FROM %s WHERE %s = (SELECT MAX(%s) FROM %s); """ %(
+                COL_BLOCKCHAIN_BLOCK_HASH, TABLE_BLOCKCHAIN, COL_BLOCKCHAIN_BLOCKID,
+                COL_BLOCKCHAIN_BLOCKID, TABLE_BLOCKCHAIN)
+
+        self.__dbcursor.execute(cmd)
+        return self.__dbcursor.fetchone()
+
+    ##########################################################################
+    #
     # CREATE TABLES
     #
     ##########################################################################
@@ -137,32 +272,47 @@ class BlockChainDB(object):
                                    COL_WALLETS_PVT_KEY)
         self.__dbcursor.execute(cmd)
 
-    def __create_block_table(self, name):
-        """Create a blocks table
+    def __create_transactions_table(self):
+        """ Create a table to store all the verified transactions
+        that has been added to the blockchain
+
+        # Transactions
+            # block, sender, receiver, amount, submitted_time, verified_time
         """
-        cmd = """ CREATE TABLE %s (
+        cmd = """ CREATE TABLE IF NOT EXISTS %s (
+                    %s text,
                     %s text,
                     %s text,
                     %s real,
-                    %s text);""" %(name,
-                                   COL_BLOCK_SENDER,
-                                   COL_BLOCK_RECEIVER,
-                                   COL_BLOCK_AMOUNT,
-                                   COL_BLOCK_TIME)
+                    %s text,
+                    %s text);""" %(TABLE_TRANSACTIONS,
+                                   COL_TRANSACTION_BLOCK,
+                                   COL_TRANSACTION_SENDER,
+                                   COL_TRANSACTION_RECEIVER,
+                                   COL_TRANSACTION_AMOUNT,
+                                   COL_TRANSACTION_SUB_TIME,
+                                   COL_TRANSACTION_VER_TIME)
         self.__dbcursor.execute(cmd)
 
     def __create_blockchain_table(self):
         """Create the blockchain table
+
+        # Blockchain
+            # block, num_of_transactions, total_amount, block_added_time, hash
         """
         cmd = """ CREATE TABLE IF NOT EXISTS %s (
-                    %s text PRIMARY KEY,
+                    %s integer PRIMARY KEY AUTOINCREMENT,
                     %s text,
+                    %s integer,
                     %s real,
+                    %s text,
                     %s text);""" %(TABLE_BLOCKCHAIN,
+                                   COL_BLOCKCHAIN_BLOCKID,
                                    COL_BLOCKCHAIN_BLOCK,
                                    COL_BLOCKCHAIN_TRANS_COUNT,
                                    COL_BLOCKCHAIN_AMOUNT,
-                                   COL_BLOCKCHAIN_TIME)
+                                   COL_BLOCKCHAIN_TIME,
+                                   COL_BLOCKCHAIN_BLOCK_HASH)
         self.__dbcursor.execute(cmd)
 
 @contextmanager
@@ -186,6 +336,11 @@ def open_database(dbpath=DB_PATH):
     db.commit()
     db.close()
 
+##############################################################################
+#
+# HELPER FUNCTIONS
+#
+##############################################################################
 def add_wallet(owner, public_key, private_key):
     with open_database() as db:
         db.add_wallet(owner, public_key, private_key)
@@ -204,3 +359,50 @@ def get_wallet_holders():
 
 def is_unique_name(name):
     return name not in get_wallet_holders()
+
+def add_block(block_name, transactions):
+    with open_database() as db:
+        timestamp = utils.get_timestamp()
+
+        hash_dict = {}
+        hash_dict['name'] = block_name
+        hash_dict['transactions'] = [t.to_json() for t in transactions]
+        hash_dict['timestamp'] = timestamp
+
+        hash_string = json.dumps(hash_dict, sort_keys=True).encode()
+        hash_value = utils.hexdigest(hash_string)
+
+        db.add_block(block_name, transactions, timestamp, hash_value)
+
+def get_block(block_name):
+    result = []
+    with open_database() as db:
+        result = db.get_block(block_name)
+
+    if result:
+        from . import block
+        return block.Block(*result[1:])
+    return result
+
+def get_transactions(block_name):
+    result = []
+    with open_database() as db:
+        result = db.get_transactions(block_name)
+
+    from . import transaction
+    return [transaction.TransactionBlock(*r) for r in result]
+
+def get_last_block():
+    result = []
+    with open_database() as db:
+        result = db.get_last_block()
+    if result:
+        from . import block
+        return block.Block(*result[1:])
+    return result
+
+def get_last_block_hash():
+    result = []
+    with open_database() as db:
+        result = db.get_last_block_hash()
+    return result

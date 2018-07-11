@@ -196,3 +196,12 @@ class Wallet(object):
 		return serialization.load_pem_public_key(
 			str(db_entry[1]),
 			backend=default_backend())
+
+
+##############################################################################
+#
+# Helpers
+#
+##############################################################################
+def generate_wallet(name, password):
+	return Wallet.generate(name, password)

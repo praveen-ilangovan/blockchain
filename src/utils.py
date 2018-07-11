@@ -1,10 +1,14 @@
 import os
+import hashlib
 from datetime import datetime
 
 def get_timestamp():
     """Get the current date and time.
     """    
     return "{:%d %b %Y %H:%M:%S}".format(datetime.now())
+
+def hexdigest(message):
+    return hashlib.sha256(message).hexdigest()
 
 ##############################################################################
 #
