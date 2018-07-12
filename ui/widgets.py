@@ -6,6 +6,7 @@ from PySide import QtCore
 from ..src import database
 from ..src.wallet import Wallet
 from ..src import transaction
+from ..src import mining
 
 MIN_WIDTH = 150
 MIN_HEIGHT = 50
@@ -296,8 +297,6 @@ class MakeTransactionWidget(QtGui.QWidget):
 
         self.setLayout(mainLayout)
 
-        self.populateUsers()
-
         self.__makeTransactionButton.clicked.connect(self.makeTransaction)
 
     def populateUsers(self):
@@ -345,6 +344,10 @@ class MakeTransactionWidget(QtGui.QWidget):
                 QtGui.QMessageBox.critical(self, "Failed",
                     " Transaction failed. Please check the password. \
                     For more details refer to the log. ")
+
+    def refresh(self):
+        self.populateUsers()
+        self.__amountEdit.setValue(0.01)
 
 class BlockViewWidget(QtGui.QWidget):
     def __init__(self, parent=None):
@@ -417,14 +420,14 @@ class TransactionsToCommitWidget(QtGui.QWidget):
 
         self.setLayout(mainLayout)
 
-        self.__mineButton.clicked.connect(self.mine)
+        self.__mining = mining.Mining()
+        self.__mineButton.clicked.connect(self.__mining.mine)
         self.__refreshButton.clicked.connect(self.populateBlock)
 
-        self.populateBlock()
 
     def populateBlock(self):
         transactions = transaction.get_pending_transactions()
         self.__currentBlock.populate(transactions)
 
-    def mine(self):
-        pass
+    def refresh(self):
+        self.populateBlock()

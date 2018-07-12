@@ -40,3 +40,6 @@ from .src.transaction import submit_transaction
 # Kick start mining and add the transactions to the blockchain
 #	==> mine()
 from .src.mining import mine
+# Launch the ui
+#	==> launch_ui()
+from .ui.MainWindow import launch_ui

@@ -27,6 +27,11 @@ class MainWindow(QtGui.QMainWindow):
 
         self.setCentralWidget(self.__tabWidget)
 
+        self.__tabWidget.currentChanged.connect(self.tabChanged)
+
+    def tabChanged(self, index):
+        self.__tabWidget.widget(index).refresh()
+
 def launch_ui():
     app = QtGui.QApplication(sys.argv)
     widget = MainWindow()
