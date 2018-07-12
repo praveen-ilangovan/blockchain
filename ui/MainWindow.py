@@ -19,11 +19,13 @@ class MainWindow(QtGui.QMainWindow):
         self.__generateWalletWidget = widgets.GenerateWalletWidget()
         self.__makeTransactionWidget = widgets.MakeTransactionWidget()
         self.__transactionToCommitWidget = widgets.TransactionsToCommitWidget()
+        self.__blockchainWidget = widgets.BlockchainWidget()
 
         self.__tabWidget.addTab(self.__generateWalletWidget, "Generate Wallet")
         self.__tabWidget.addTab(self.__makeTransactionWidget, "Make Transaction")
         self.__tabWidget.addTab(self.__transactionToCommitWidget,
                                 "View Pending Transactions")
+        self.__tabWidget.addTab(self.__blockchainWidget, "View Blockchain")
 
         self.setCentralWidget(self.__tabWidget)
 

@@ -349,41 +349,26 @@ class MakeTransactionWidget(QtGui.QWidget):
         self.populateUsers()
         self.__amountEdit.setValue(0.01)
 
-class BlockViewWidget(QtGui.QWidget):
-    def __init__(self, parent=None):
-        super(BlockViewWidget, self).__init__(parent)
-
-        # A table widget to display transactions that has
-        # not been pushed to the blockchain yet
-        # Sender, Receiver, Amount, TimeStamp
-        self.__tableWidget = QtGui.QTableWidget()
-        self.__tableWidget.setColumnCount(4)
-        self.__tableWidget.horizontalHeader().setStretchLastSection(True)
-
-        mainLayout = QtGui.QVBoxLayout()
-        mainLayout.addWidget(self.__tableWidget)
-
-        self.setLayout(mainLayout)
+class DataDisplayWidget(QtGui.QTableWidget):
+    def __init__(self, columns, headerLables, keys, parent=None):
+        super(DataDisplayWidget, self).__init__(parent)
+        self.setColumnCount(columns)
+        self.__headerLabels = headerLables
+        self.__keys = keys
 
     def populate(self, data):
-        self.__tableWidget.clearContents()
-
-        self.__tableWidget.setHorizontalHeaderLabels(['Sender',
-                                                      'Receiver',
-                                                      'Amount',
-                                                      'Time'])
+        self.clearContents()
+        self.setHorizontalHeaderLabels(self.__headerLabels)
 
         for index, detail in enumerate(data):
-            if index >= self.__tableWidget.rowCount():
-                self.__tableWidget.insertRow(index)
-            self.__tableWidget.setItem(index, 0, self.__getItem(detail['sender']))
-            self.__tableWidget.setItem(index, 1, self.__getItem(detail['receiver']))
-            self.__tableWidget.setItem(index, 2, self.__getItem(str(detail['amount'])))
-            self.__tableWidget.setItem(index, 3, self.__getItem(detail['submitted_time']))
+            if index >= self.rowCount():
+                self.insertRow(index)
+            for i, key in enumerate(self.__keys):
+                self.setItem(index, i, self.__getItem(detail[key]))
 
     def __getItem(self, text):
         item = QtGui.QTableWidgetItem()
-        item.setText(text)
+        item.setText(str(text))
         item.setTextAlignment(QtCore.Qt.AlignCenter)
         return item
 
@@ -400,7 +385,9 @@ class TransactionsToCommitWidget(QtGui.QWidget):
                      },
                     ...]
         """
-        self.__currentBlock = BlockViewWidget()
+        self.__currentBlock = DataDisplayWidget(4,
+            ['Sender', 'Receiver', 'Amount', 'Time created'],
+            ['sender', 'receiver', 'amount', 'submitted_time'])
         self.__mineButton = QtGui.QPushButton("Mine")
         self.__mineButton.setMinimumWidth(MIN_WIDTH)
         self.__mineButton.setMinimumHeight(MIN_HEIGHT)
@@ -424,10 +411,46 @@ class TransactionsToCommitWidget(QtGui.QWidget):
         self.__mineButton.clicked.connect(self.__mining.mine)
         self.__refreshButton.clicked.connect(self.populateBlock)
 
-
     def populateBlock(self):
         transactions = transaction.get_pending_transactions()
         self.__currentBlock.populate(transactions)
 
     def refresh(self):
         self.populateBlock()
+
+class BlockchainWidget(QtGui.QWidget):
+    def __init__(self, parent=None):
+        super(BlockchainWidget, self).__init__(parent)
+
+        # A table widget to view all the blocks in the
+        # blockchain
+        # Block name, number of transactions, transacted amount, timestamp
+        self.__blockwidget = DataDisplayWidget(4,
+            ['Name', 'Count', 'Total amount', 'Time created'],
+            ['name', 'num_of_transactions', 'transacted_amount', 'added_time'])
+        self.__transactionWidget = DataDisplayWidget(5,
+            ['Sender', 'Receiver', 'Amount', 'Time created', 'Time verified'],
+            ['sender', 'receiver', 'amount', 'submitted_time', 'verified_time'])
+
+        mainLayout = QtGui.QVBoxLayout()
+        mainLayout.addWidget(self.__blockwidget)
+        mainLayout.addStretch(0)
+        mainLayout.addWidget(self.__transactionWidget)
+        mainLayout.addStretch(1)
+
+        self.setLayout(mainLayout)
+        self.__blockwidget.itemClicked.connect(self.blockClicked)
+
+    def populate(self):
+        data = database.get_blocks()
+        self.__blockwidget.populate(data)
+
+    def refresh(self):
+        self.populate()
+        self.__transactionWidget.populate([])
+
+    def blockClicked(self, item):
+        block = self.__blockwidget.item(item.row(), 0).text()
+        transactions = database.get_transactions(block)
+        self.__transactionWidget.populate(transactions)
+

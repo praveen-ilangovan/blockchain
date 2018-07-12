@@ -50,3 +50,14 @@ class Block(object):
     def __str__(self):
         return "Block(%s, %s, %s)" %(self.__name,
             self.__num_of_transactions, self.__transacted_amount)
+
+    def __getitem__(self, attr):
+        if attr == 'name':
+            return self.name
+        elif attr == 'num_of_transactions':
+            return self.num_of_transactions
+        elif attr == 'transacted_amount':
+            return self.transacted_amount
+        elif attr == 'added_time':
+            return self.added_time
+        return ''

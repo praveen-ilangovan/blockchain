@@ -72,7 +72,6 @@ class Mining(object):
             return
 
         nonce = self.proof_of_work()
-        print nonce
 
         # add to blockchain
         self.add_to_blockchain()

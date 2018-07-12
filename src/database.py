@@ -208,6 +208,17 @@ class BlockChainDB(object):
         self.__dbcursor.execute(cmd)
         return self.__dbcursor.fetchone()
 
+    def get_blocks(self):
+        """ Returns all the blocks in the blockchain
+
+        Returns:
+            list of tuple
+        """
+        cmd = """  SELECT * FROM %s; """ %(TABLE_BLOCKCHAIN)
+
+        self.__dbcursor.execute(cmd)
+        return self.__dbcursor.fetchall()
+
     def get_transactions(self, block_name):
         """ Returns all the transactions that are part of a block
 
@@ -383,6 +394,14 @@ def get_block(block_name):
         from . import block
         return block.Block(*result[1:])
     return result
+
+def get_blocks():
+    result = []
+    with open_database() as db:
+        result = db.get_blocks()
+
+    from . import block
+    return [block.Block(*r[1:]) for r in result]
 
 def get_transactions(block_name):
     result = []
