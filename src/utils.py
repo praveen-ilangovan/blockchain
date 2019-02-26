@@ -30,4 +30,7 @@ def get_resources_dir():
     """Get the resources dir. This is where the db file
     is located.
     """
-    return os.path.join(get_module_path(), "resources")
+    resource_dir = os.path.join(get_module_path(), "resources")
+    if not os.path.exists(resource_dir):
+        os.makedirs(resource_dir)
+    return resource_dir
