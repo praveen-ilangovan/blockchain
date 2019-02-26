@@ -32,7 +32,8 @@ def test_wallets_table_exists():
     with open_database(TEST_DB_PATH) as db:
         cmd = "SELECT name FROM sqlite_master WHERE type='table';"
         db.dbcursor.execute(cmd)
-        assert db.dbcursor.fetchall() == [(TABLE_WALLETS,)]
+        tables = [i[0] for i in db.dbcursor.fetchall()]
+        assert TABLE_WALLETS in tables
 
 def test_add_wallets():
     sample_users = ('Praveen', 'Mrinu', 'Ishu')

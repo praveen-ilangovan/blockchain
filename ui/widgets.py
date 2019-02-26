@@ -19,7 +19,7 @@ MIN_HEIGHT = 50
 
 class SetPasswordDialog(QtGui.QDialog):
     """ A simple widget to validate and set a password.
-        
+
     """
     def __init__(self, parent=None):
         super(SetPasswordDialog, self).__init__(parent)
@@ -110,7 +110,7 @@ class GetPasswordDialog(QtGui.QDialog):
 
 class KeyDisplayWidget(QtGui.QWidget):
     """ A simple widget to display the RSA key.
-        
+
     """
     def __init__(self, label, parent=None):
         super(KeyDisplayWidget, self).__init__(parent)
@@ -134,7 +134,7 @@ class KeyDisplayWidget(QtGui.QWidget):
 
 class UserComboBox(QtGui.QWidget):
     """ A drop down box to list all the available users
-    in the database.        
+    in the database.
     """
     def __init__(self, label, parent=None):
         super(UserComboBox, self).__init__(parent)
@@ -143,7 +143,7 @@ class UserComboBox(QtGui.QWidget):
         self.__cbox = QtGui.QComboBox()
         self.__cbox.setMinimumWidth(MIN_WIDTH)
         self.__cbox.setMinimumHeight(MIN_HEIGHT)
-        
+
         mainLayout = QtGui.QHBoxLayout()
         mainLayout.addWidget(self.__label)
         mainLayout.addWidget(self.__cbox)
@@ -172,13 +172,13 @@ class GenerateWalletWidget(QtGui.QWidget):
 
     The details are passed over to the Wallets module which sets up
     a new account and also creates a RSA public and private keys.
-    The information is then stored in the database. The private key 
+    The information is then stored in the database. The private key
     is encrypted with the password provided by the user before
     storing it in the database. Only the user with this password can
     decrypt and access the private key.
     """
     def __init__(self, parent=None):
-        super(GenerateWalletWidget, self).__init__(parent)        
+        super(GenerateWalletWidget, self).__init__(parent)
 
         # Enter a name
         self.__nameLabel = QtGui.QLabel("  Name       :")
@@ -219,12 +219,12 @@ class GenerateWalletWidget(QtGui.QWidget):
     def generate(self):
         name = str(self.__nameEdit.text())
         if not name:
-            QtGui.QMessageBox.critical(self, "No name", 
+            QtGui.QMessageBox.critical(self, "No name",
                                        "Please enter a name.")
             return
 
         if not database.is_unique_name(name):
-            QtGui.QMessageBox.critical(self, "Username already exists", 
+            QtGui.QMessageBox.critical(self, "Username already exists",
                                        "Please select a unique name.")
             return
 
@@ -237,7 +237,7 @@ class GenerateWalletWidget(QtGui.QWidget):
 
         wallet = Wallet.generate(name, password)
         if not wallet:
-            QtGui.QMessageBox.critical(self, "Failed", 
+            QtGui.QMessageBox.critical(self, "Failed",
                                        "Failed to generate a wallet")
             return
 
@@ -258,10 +258,10 @@ class MakeTransactionWidget(QtGui.QWidget):
     to initiate a transaction. You will be prompted to
     enter the password. This password is used to decrypt
     the RSA private key of the sender which is then used to
-    sign the transaction. 
+    sign the transaction.
 
     The signed transaction is then verified by the block module
-    to validate the transaction. If it is verified then the 
+    to validate the transaction. If it is verified then the
     transaction is added to the pending queue.
     """
     def __init__(self, parent=None):
@@ -309,24 +309,24 @@ class MakeTransactionWidget(QtGui.QWidget):
     def makeTransaction(self):
         sender = str(self.__senderBox.get_user())
         if not sender:
-            QtGui.QMessageBox.critical(self, "Invalid input", 
+            QtGui.QMessageBox.critical(self, "Invalid input",
                                        "Please choose the sender")
             return
 
         receiver = str(self.__receiverBox.get_user())
         if not receiver:
-            QtGui.QMessageBox.critical(self, "Invalid input", 
+            QtGui.QMessageBox.critical(self, "Invalid input",
                                        "Please choose the receiver")
             return
 
         if sender == receiver:
-            QtGui.QMessageBox.critical(self, "Invalid input", 
+            QtGui.QMessageBox.critical(self, "Invalid input",
                         "Sender and receiver cannot be the same.")
-            return 
+            return
 
         amount = self.__amountEdit.value()
         if amount < 0.01:
-            QtGui.QMessageBox.critical(self, "Invalid input", 
+            QtGui.QMessageBox.critical(self, "Invalid input",
                             "Please specify an amount more than 0.01")
             return
 
