@@ -2,6 +2,27 @@
 
 ### A basic blockchain project written in Python using cryptography module.
 
+### Usage
+
+Setting up python2.7 and virtual environment in windows using pyenv
+
+```sh
+cd blockchain
+pyenv install 2.7.18
+pyenv local 2.7.18
+set PYTHONIOENCODING=UTF-8 # To avoid LookupError: unknown encoding: cp65001
+python -m pip install virtualenv
+```
+
+Installing the requirments
+
+```sh
+python -m virtualenv .venv
+.venv/Scripts/activate.bat
+python -m pip install -r requirements.txt
+python
+```
+
 #### Example snippet
 ```python
 import blockchain
@@ -20,12 +41,10 @@ blockchain.submit_transaction('User2', 'User1', 2.01, "User2Password")
 # Add them to the blockchain
 blockchain.mine()
 
-# Launch UI
-blockchain.launch_ui()
 ```
 
 #### Running test
-```python
-cd <blockchain_dir>
+```sh
+cd blockchain
 python -m pytest
 ```

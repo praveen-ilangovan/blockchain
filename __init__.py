@@ -50,10 +50,3 @@ from .src.transaction import submit_transaction
 # Kick start mining and add the transactions to the blockchain
 #   ==> mine()
 from .src.mining import mine
-# Launch the ui
-#   ==> launch_ui()
-try:
-    import PySide
-    from .ui.MainWindow import launch_ui
-except ImportError:
-    print "PySide module not found. Install PySide to launch UI."
